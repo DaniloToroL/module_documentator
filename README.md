@@ -4,10 +4,17 @@ Generates documentation for a Rocketbot module.
 
 This script assume that the package module has description field in all attributes.
 
+
+
 ### Usage:
 
 ```
 documentator.py [--module, -m] [--readme, -r] [--lang, -l] [--help, -h] <module>
+
+or
+
+documentator.py <module> -> To create all at once.
+
 ```
 
 ### Options:
@@ -24,10 +31,10 @@ documentator.py [--module, -m] [--readme, -r] [--lang, -l] [--help, -h] <module>
 
 `documentator.py -a -m -l en /home/user/Rocketbot/modules/advancedExcel `
 
-`documentator.py`
+`documentator.py /home/user/Rocketbot/modules/advancedExcel `
 
 This file can also be imported as a module and contains the following classes:
 
 - **Documentator**: Generates documentation for a Rocketbot module.
 - **Package**: Class that represent the package file of a module.
-- **Module**: Class with funtion related with a module.
+- **Module**: Class with function related with a module.
