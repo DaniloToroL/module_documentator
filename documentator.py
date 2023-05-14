@@ -1,4 +1,4 @@
-__version__ = "0.1.3"
+__version__ = "0.2.3"
 __author__ = "Danilo Toro"
 __license__ = "MIT"
 
@@ -8,7 +8,7 @@ import os
 from mdutils.mdutils import MdUtils
 import git
 import re
-
+import sys
 
 LICENSES = {
     "MIT": {
@@ -18,23 +18,31 @@ LICENSES = {
 }
 
 LANGUAGE = {
-    "how_to_install": {"es": "Como instalar este ", "en": "Howto install this "},
-    "how_to_use": {"es": "Como usar este ", "en": "How to use this "},
-    "module": {"es": "módulo", "en": "module"},
-    "options": {"es": "Opciones", "en": "Options"},
-    "parameters": {"es": "Parámetros", "en": "Parameters"},
-    "description": {"es": "Descripción", "en": "Description"},
-    "example": {"es": "ejemplo", "en": "example"},
+    "how_to_install": {"es": "Como instalar este ", "en": "How to install this ", "pr": "Como instalar este "},
+    "how_to_use": {"es": "Como usar este modulo", "en": "How to use this module", "pr": "Como usar este módulo"},
+    "module": {"es": "módulo", "en": "module", "pr": "módulo"},
+    "options": {"es": "Opciones", "en": "Options", "pr": "Opções"},
+    "parameters": {"es": "Parámetros", "en": "Parameters", "pr": "Parâmetros"},
+    "description": {"es": "Descripción", "en": "Description", "pr": "Descrição"},
+    "example": {"es": "ejemplo", "en": "example", "pr": "exemplo"},
     "installation": {
-        "es": lambda folder: f"__Descarga__ e __instala__ el contenido en la carpeta '{folder}s' en la ruta de rocketbot.",
-        "en": lambda folder: f"__Download__ and __install__ the content in '{folder}s' folder in Rocketbot path",
+        "es": """Para instalar el módulo en Rocketbot Studio, se puede hacer de dos formas:
+1. Manual: __Descargar__ el archivo .zip y descomprimirlo en la carpeta modules. El nombre de la carpeta debe ser el mismo al del módulo y dentro debe tener los siguientes archivos y carpetas: \__init__.py, package.json, docs, example y libs. Si tiene abierta la aplicación, refresca el navegador para poder utilizar el nuevo modulo.
+2. Automática: Al ingresar a Rocketbot Studio sobre el margen derecho encontrara la sección de **Addons**, seleccionar **Install Mods**, buscar el modulo deseado y presionar install.""",
+        "en": """To install the module in Rocketbot Studio, it can be done in two ways:
+1. Manual: __Download__ the .zip file and unzip it in the modules folder. The folder name must be the same as the module and inside it must have the following files and folders: \__init__.py, package.json, docs, example and libs. If you have the application open, refresh your browser to be able to use the new module.
+2. Automatic: When entering Rocketbot Studio on the right margin you will find the **Addons** section, select **Install Mods**, search for the desired module and press install.""",
+        "pr": """Para instalar o módulo no Rocketbot Studio, pode ser feito de duas formas:
+1. Manual: __Baixe__ o arquivo .zip e descompacte-o na pasta módulos. O nome da pasta deve ser o mesmo do módulo e dentro dela devem ter os seguintes arquivos e pastas: \__init__.py, package.json, docs, example e libs. Se você tiver o aplicativo aberto, atualize seu navegador para poder usar o novo módulo.
+2. Automático: Ao entrar no Rocketbot Studio na margem direita você encontrará a seção **Addons**, selecione **Install Mods**, procure o módulo desejado e aperte instalar.""",
     },
     "overview_module": {
         "es": "Descripción de los comandos",
         "en": "Description of the commands",
+        "pr": "Descrição do comando",
     },
-    "overview_addon": {"es": "Configuración", "en": "Configuration"},
-    "language": {"es": "Español", "en": "English"},
+    "overview_addon": {"es": "Configuración", "en": "Configuration", "pr": "Configuração"},
+    "language": {"es": "Español", "en": "English", "pr": "Portugues"}
 }
 
 
@@ -176,12 +184,18 @@ class Documentator:
 
     def __create_md_base(
         self, path_to_save: str, lang: str, banner_path: str = ""
-    ) -> MdUtils:
+    ) -> MdUtils:           
         component_type = self.package.get_component_type()
         md_file = MdUtils(file_name=path_to_save)
-        md_file.new_header(level=1, title=self.package.title[lang])
-        self.__add_description_module(md_file, self.package.description, lang)
-
+        title = self.package.title[lang]
+        title_=self.package.name
+        md_file.new_header(level=1, title=title)
+        md_file.new_line(self.package.description_lang[lang], wrap_width=1000)
+        if sys._getframe().f_back.f_code.co_name == "to_manual":
+            md_file.new_line(f"\n*Read this in other languages: [English](Manual_{title_}.md), [Português](Manual_{title_}.pr.md), [Español](Manual_{title_}.es.md)*\n", wrap_width=1000)
+        else:
+            md_file.new_line(f"\n*Read this in other languages: [English](README.md), [Português](README.pr.md), [Español](README.es.md)*\n", wrap_width=1000)
+        #self.__add_description_module(md_file, self.package.description, lang)
         if banner_path:
             md_file.new_line(md_file.new_inline_image("banner", banner_path))
 
@@ -190,23 +204,33 @@ class Documentator:
             level=2,
             title=LANGUAGE["how_to_install"][lang] + LANGUAGE[component_type][lang],
         )
-        md_file.new_line(LANGUAGE["installation"][lang](component_type))
-        md_file.new_line("\n\n")
+        md_file.new_line(LANGUAGE["installation"][lang], wrap_width=1000)
+        md_file.new_line("\n")
         # How to use section
-        self.__add_how_to_use(md_file, lang)
+        if sys._getframe().f_back.f_code.co_name == "to_manual":
+            self.__add_how_to_use(md_file, lang)
+        
         return md_file
 
     def __add_how_to_use(self, md_file: MdUtils, lang: str) -> MdUtils:
         if not os.path.exists(f"{self.path}/docs/how_to_use.md"):
             return md_file
-
+        
+        l = ["en", "es", "pr"]
+        
         with open(f"{self.path}/docs/how_to_use.md", "r", encoding="utf-8") as f:
             how_to_use = f.read()
-        how_to_use = how_to_use.split("---")
-        l = ["en", "es", "pr"]
-        how_to_use = how_to_use[l.index(lang)]
-        md_file.write(how_to_use)
-
+        try:
+            how_to_use = how_to_use.split("---")
+            how_to_use = how_to_use[l.index(lang)]
+            md_file.write(how_to_use, wrap_width=1000)
+        except:
+            lang = '' if (lang == 'en') else ("." + lang)
+                
+            with open(f"{self.path}/docs/how_to_use{lang}.md", "r", encoding="utf-8") as f:
+                how_to_use = f.read()
+            md_file.write(how_to_use, wrap_width=1000)
+            
     def to_readme(self, path_to_save="", lang="en") -> None:
         """Generate the README.md file.
 
@@ -221,8 +245,11 @@ class Documentator:
         -------
         None
         """
+        lang_ = '' if (lang == 'en') else ("." + lang)
+        
         if not path_to_save:
-            path_to_save = os.path.join(self.path, "README.md")
+            path_to_save = os.path.join(self.path, f"README{lang_}.md")
+        
         md_file = self.__create_md_base(path_to_save, lang)
 
         # Create description section
@@ -231,7 +258,7 @@ class Documentator:
             title = self.package.get_attribute(command, "title", lang)
             description = self.package.get_attribute(command, "description", lang)
             md_file.new_paragraph(f"{i}. {title}")
-            md_file.new_line(description)
+            md_file.new_line(description, wrap_width=1000)
 
         # Create updates section
         md_file.new_line("\n\n")
@@ -268,8 +295,8 @@ class Documentator:
 
         desc_splitted = description.split("| ")
         l = ["es", "en", "pr"]
-        description = desc_splitted[l.index(lang)]
-        md.new_line(description.strip())
+        description = desc_splitted[l.index(lang) -1]
+        md.new_line(description.strip(), wrap_width=1000)
         md.new_line()
 
     def __add_command_image(
@@ -314,9 +341,11 @@ class Documentator:
             path_to_save = self.module.doc_path
 
         if not banner_path:
-            banner_path = "/docs/imgs/Banner_{name}.png".format(name=self.name)
+            banner_path = "imgs/Banner_{name}.png o jpg".format(name=self.package.name)
 
-        md_file = self.__create_md_base(path_to_save, lang, banner_path)
+        lang_ = '' if (lang == 'en') else ("." + lang)        
+        
+        md_file = self.__create_md_base(path_to_save + lang_, lang, banner_path)
 
         # Create description section
         md_file.new_header(
@@ -327,7 +356,7 @@ class Documentator:
             title = self.package.get_attribute(command, "title", lang)
             description = self.package.get_attribute(command, "description", lang)
             md_file.new_header(level=3, title=title)
-            md_file.new_line(description)
+            md_file.new_line(description, wrap_width=1000)
             table = [
                 LANGUAGE["parameters"][lang],
                 LANGUAGE["description"][lang],
@@ -391,7 +420,10 @@ class Module:
         self.path = path
         self.package = self.read_package()
         self.name = self.package.name
-        self.create_logs()
+        
+        # Commented until we find a better way to make CHANGES.txt
+        # self.create_logs()
+        
         self.doc_path = self.create_docs_path()
 
     def read_package(self) -> Package:
@@ -450,7 +482,7 @@ if __name__ == "__main__":
 
     readme = True
     manual = True
-    lang = "es"
+    langs = ["en", "pr", "es"]
     terminal = False
 
     # Check if arguiments were passed and inizialize the CLI interface
@@ -485,10 +517,11 @@ if __name__ == "__main__":
         exit()
 
     documentator = Documentator(folder)
-    if readme:
-        documentator.to_readme(lang="en")
-    if manual:
-        documentator.to_manual(lang=lang)
+    for l in langs:
+        if readme:
+            documentator.to_readme(lang=l)
+        if manual:
+            documentator.to_manual(lang=l)
 
     if not terminal:
         messagebox.showinfo(
